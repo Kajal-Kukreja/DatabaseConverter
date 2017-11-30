@@ -27,7 +27,6 @@ public class DatabaseConverter {
     private static List<KeyDetail> foreignKeyIndexes = new ArrayList<>();
     private static List<KeyDetail> otherIndexes = new ArrayList<>();
 
-    private static String sqlMode = "";
     private static StringBuilder allQueries = new StringBuilder();
     private static StringBuilder requiredQueries = new StringBuilder();
 
@@ -67,8 +66,6 @@ public class DatabaseConverter {
 
             myDBConnection = getConnection(databaseName);
 
-            getSQLMode(myDBConnection);
-
             //disable foreign key checks because we have dropped foreign keys temporarily and if this check is enabled alter query will fail
             setForeignKeyChecks(myDBConnection, 0);
 
@@ -106,6 +103,9 @@ public class DatabaseConverter {
 
                         LOGGER.info("\nAll good!");
 
+                        //enable foreign key checks and strict mode
+                        setForeignKeyChecks(myDBConnection, 1);
+
                         //LOGGER.info("Printing all queries\n\n");
                         //LOGGER.info(String.valueOf(allQueries));
 
@@ -122,9 +122,6 @@ public class DatabaseConverter {
                         byte requiredQueriesData[] = StringUtils.getBytes(String.valueOf(requiredQueries));
                         Files.write(requiredQueriesFile, requiredQueriesData);
                         LOGGER.info("Stored all queries in " + requiredQueriesFilename + " file.");
-
-                        //enable foreign key checks and strict mode
-                        setForeignKeyChecks(myDBConnection, 1);
                     }
                 }
             }
@@ -165,19 +162,6 @@ public class DatabaseConverter {
     public static void closeConnection(Connection connection) throws SQLException {
         connection.close();
         LOGGER.info("Connection closed!");
-    }
-
-    public static void getSQLMode(Connection myDBConnection) throws SQLException {
-        PreparedStatement preparedStatement = myDBConnection.prepareStatement("SELECT @@sql_mode;");
-
-        allQueries.append(((JDBC4PreparedStatement)preparedStatement).asSql() + "\n");
-        requiredQueries.append(((JDBC4PreparedStatement)preparedStatement).asSql() + "\n");
-
-        ResultSet resultSet = preparedStatement.executeQuery();
-        if (resultSet.next()) {
-            sqlMode = resultSet.getString("@@sql_mode");
-            LOGGER.info("Current SQL Mode is " + sqlMode);
-        }
     }
 
     public static void setForeignKeyChecks(Connection myDBConnection, int checkValue) throws SQLException {
